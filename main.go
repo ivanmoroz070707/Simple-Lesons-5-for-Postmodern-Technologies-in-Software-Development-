@@ -1,33 +1,40 @@
 package main
 
 import (
-	"fmt"
+	"database/sql" // Додали цей імпорт, щоб працював sql.Open
 	"log"
 	"net/http"
-	"house-api/models"
+	"os"
+
+	"github.com/go-chi/chi/v5"
+	_ "github.com/go-sql-driver/mysql" // Драйвер MySQL
 )
 
-func main() {
-	// 1. Завантаження конфігурації (Viper)
-	cfg, err := LoadConfiguration()
-	if err != nil {
-		log.Fatalf("Could not load config: %v", err)
-	}
-	var repo models.HouseRepository
-	handler := &HouseHandler{repo: repo} // repo має реалізувати HouseRepository
-
-	// 4. Роутинг (Go 1.22)
-	mux := http.NewServeMux()
-	
-
-	mux.HandleFunc("POST /houses", handler.CreateHouse)           // 1
-	mux.HandleFunc("GET /houses", handler.GetAllHouses)           // 2
-	mux.HandleFunc("GET /houses/{id}", handler.GetHouseByID)      // 3
-	mux.HandleFunc("PUT /houses/{id}", handler.UpdateHouse)       // 4
-	mux.HandleFunc("PATCH /houses/{id}", handler.UpdateHousePartial) // 5
-	mux.HandleFunc("DELETE /houses/{id}", handler.DeleteHouse)    // 6
-
-	// 5. Запуск
-	fmt.Printf("Server is running on port %s...\n", cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+type House struct {
+    ID                          string  `json:"id"`
+    Address              string  `json:"address"`
+    Price                     int     `json:"price"`
+    Floors                  int     `json:"floors"`       
+    SquareMeters  float64 `json:"square_meters"` 
 }
+
+func main() {
+    // 1. Підключення до бази 
+    db, err := sql.Open("mysql", os.Getenv("DB_URL"))
+    if err != nil {  log.Fatal(err) }
+
+    houseRepo := NewSqlHouseRepository(db)
+    handler := &HouseHandler{ repo: houseRepo}
+    
+    r := chi.NewRouter()
+    
+    r.Post("/houses", handler.CreateHouse)
+    r.Get("/houses", handler.GetHouses)
+    r.Get("/houses/{id}", handler.GetHouseByID)
+
+    http.HandleFunc("/houses", handler.CreateHouse)
+    
+    log.Println("Server is running on port 8080...")
+    log.Fatal(http.ListenAndServe(":8080", r))
+}
+

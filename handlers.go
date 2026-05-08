@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv" 
 	"house-api/models" 
@@ -11,29 +12,32 @@ type HouseHandler struct {
 	repo models.HouseRepository
 }
 
-// 1. POST /houses — Створення
 func (h *HouseHandler) CreateHouse(w http.ResponseWriter, r *http.Request) {
-	var house models.House
-	if err := json.NewDecoder(r.Body).Decode(&house); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
+    var house models.House
+    
+    if err := json.NewDecoder(r.Body).Decode(&house); err != nil {
+        log.Printf("Помилка декодування JSON: %v", err)
+        http.Error(w, "Invalid JSON", http.StatusBadRequest)
+        return
+    }
 
-	if err := house.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+    if err := house.Validate(); err != nil {
+        log.Printf("Помилка валідації: %v", err)
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
 
-	if err := h.repo.Create(&house); err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+    err := h.repo.Create(&house)
+    if err != nil {
+        log.Printf("КРИТИЧНА ПОМИЛКА БАЗИ ДАНИХ: %v", err)
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
+    }
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(house)
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(house)
 }
 
-// 2. GET /houses — Отримання всіх
 func (h *HouseHandler) GetAllHouses(w http.ResponseWriter, r *http.Request) {
 	houses, err := h.repo.GetAll()
 	if err != nil {
@@ -44,7 +48,6 @@ func (h *HouseHandler) GetAllHouses(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(houses)
 }
 
-// 3. GET /houses/{id} — Отримання одного
 func (h *HouseHandler) GetHouseByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -60,7 +63,18 @@ func (h *HouseHandler) GetHouseByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(house)
 }
 
-// 4. PUT /houses/{id} — Повне оновлення
+func (h *HouseHandler) GetHouses(w http.ResponseWriter, r *http.Request) {
+    houses, err := h.repo.GetAll()
+    if err != nil {
+        log.Printf("Помилка при отриманні списку будинків: %v", err)
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(houses)
+}
+
 func (h *HouseHandler) UpdateHouse(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -73,7 +87,7 @@ func (h *HouseHandler) UpdateHouse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	house.ID = id // Гарантуємо, що ID з URL співпадає з моделлю
+	house.ID = id 
 
 	if err := house.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -87,7 +101,6 @@ func (h *HouseHandler) UpdateHouse(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(house)
 }
 
-// 5. PATCH /houses/{id} — Часткове оновлення (UpdatePartial)
 func (h *HouseHandler) UpdateHousePartial(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -95,7 +108,6 @@ func (h *HouseHandler) UpdateHousePartial(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Декодуємо JSON у map, щоб передати в UpdatePartial напарника
 	var updateData map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -109,7 +121,6 @@ func (h *HouseHandler) UpdateHousePartial(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// 6. DELETE /houses/{id} — Видалення
 func (h *HouseHandler) DeleteHouse(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
