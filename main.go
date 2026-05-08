@@ -8,10 +8,12 @@ import("context"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool")
-type House struct{
-	ID      string `json:"id"`
-	Address string `json:"address"`
-	Price   int    `json:"price"`
+type House struct {
+    ID           string  `json:"id"`
+    Address      string  `json:"address"`
+    Price        int     `json:"price"`
+    Floors       int     `json:"floors"`       // Додаткове поле для валідації
+    SquareMeters float64 `json:"square_meters"` // Додаткове поле
 }
 func main(){
 	cfg, err := LoadConfig()
