@@ -1,22 +1,29 @@
 package main
-import("log"
-		"github.com/spf13/viper")
-type Configuration struct{
-	Port string `mapstructure:"Port"`
-	DBURL string `mapstructure:"DB_URL"`
-}
-func LoadConfiguration()(Configuration Config,err error)
-{
-	viper.AddConfigPath(".")
-	viper.SetConfigName(".env")
-	viper.SetConfigType("env")
-	viper.AutomaticEnv()
 
-	err= viper.ReadInConfig()
-	if err != nil
-	{
-		log.Println(".env file not found, using system environment variables")
+import (
+	"fmt"
+	"github.com/spf13/viper"
+)
+
+type Configuration struct {
+	Port  string `mapstructure:"port"`
+	DBURL string `mapstructure:"db_url"`
+}
+
+func LoadConfiguration() (config Configuration, err error) {
+	viper.SetConfigFile(".env")
+	viper.SetConfigType("env")
+
+	if err := viper.ReadInConfig(); err != nil {
+		return config, fmt.Errorf("Помилка читання .env: %w", err)
 	}
 
-	err = viper.Unmarshal(&Configuration)
+	config.Port = viper.GetString("PORT")
+	config.DBURL = viper.GetString("DB_URL")
+
+	if config.Port == "" {
+		config.Port = "8080"
+	}
+
+	return config, nil
 }

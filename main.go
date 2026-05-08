@@ -1,33 +1,49 @@
 package main
 
-import("context"
+import (
+	"database/sql" // Додали цей імпорт, щоб працював sql.Open
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool")
+	_ "github.com/go-sql-driver/mysql" // Драйвер MySQL
+)
+
 type House struct {
-    ID           string  `json:"id"`
-    Address      string  `json:"address"`
-    Price        int     `json:"price"`
-    Floors       int     `json:"floors"`       // Додаткове поле для валідації
-    SquareMeters float64 `json:"square_meters"` // Додаткове поле
+    ID                          string  `json:"id"`
+    Address              string  `json:"address"`
+    Price                     int     `json:"price"`
+    Floors                  int     `json:"floors"`       
+    SquareMeters  float64 `json:"square_meters"` 
 }
-func main(){
-	cfg, err := LoadConfig()
+
+func main() {
+	// 1. Завантаження конфігурації
+	cfg, err := LoadConfiguration()
 	if err != nil {
 		log.Fatalf("Config error: %v", err)
 	}
-	dbpool, err := pgxpool.New(context.Background(), cfg.DBURL)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-	defer dbpool.Close()
-	r:=chi.NewRouter()
 
+	// 2. Підключення до MySQL
+	db, err := sql.Open("mysql", cfg.DBURL)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	// Перевірка зв'язку
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Database is unreachable: %v", err)
+	}
+
+	// 3. Запуск міграцій (зверни увагу на велику літеру R)
+	RunMigrations(db)
+
+	// 4. Роутер
+	r := chi.NewRouter()
+	
+	// Тут Ваня  додай свої обробники (handlers)
 
 	fmt.Printf("Server starting on port %s...\n", cfg.Port)
 	err = http.ListenAndServe(":"+cfg.Port, r)
