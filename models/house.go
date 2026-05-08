@@ -1,6 +1,7 @@
 package models
 
-import "fmt"
+import ("errors"
+"strings")
 
 type House struct {
 	ID        int     `json:"id"`
