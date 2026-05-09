@@ -18,14 +18,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-type House struct {
-    ID                          string  `json:"id"`
-    Address              string  `json:"address"`
-    Price                     int     `json:"price"`
-    Floors                  int     `json:"floors"`       
-    SquareMeters  float64 `json:"square_meters"` 
-}
-
 func runDBMigration(db *sql.DB) {
 	driver, err := mysql.WithInstance(db, &mysql.Config{})
 	if err != nil {

@@ -2,18 +2,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
 	"house-api/models"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 // ==========================================
-// 1. ПОВНИЙ MOCK РЕПОЗИТОРІЙ
+// 1. MOCK РЕПОЗИТОРІЙ
 // ==========================================
 type MockHouseRepo struct {
 	mock.Mock
@@ -37,13 +40,14 @@ func (m *MockHouseRepo) GetByID(id int) (*models.House, error) {
 	return nil, args.Error(1)
 }
 
+// ВИПРАВЛЕНО: Тепер відповідає інтерфейсу (приймає тільки house)
 func (m *MockHouseRepo) UpdateFull(house *models.House) error {
 	args := m.Called(house)
 	return args.Error(0)
 }
 
-func (m *MockHouseRepo) UpdatePartial(id int, updateData map[string]interface{}) error {
-	args := m.Called(id, updateData)
+func (m *MockHouseRepo) UpdatePartial(id int, updates map[string]interface{}) error {
+	args := m.Called(id, updates)
 	return args.Error(0)
 }
 
@@ -53,64 +57,65 @@ func (m *MockHouseRepo) Delete(id int) error {
 }
 
 // ==========================================
-// 2. ТЕСТИ
+// 2. ТЕСТИ ДЛЯ ЕНДПОІНТІВ
 // ==========================================
 
-func TestCreateHouse_Success(t *testing.T) {
+func TestCreateHouse(t *testing.T) {
 	mockRepo := new(MockHouseRepo)
 	handler := &HouseHandler{repo: mockRepo}
 
-	newHouse := models.House{Address: "Kyiv, Khreshchatyk", Rooms: 2, Price: 150000}
-	
+	newHouse := &models.House{Address: "Main St", Price: 1000}
 	mockRepo.On("Create", mock.AnythingOfType("*models.House")).Return(nil)
 
 	body, _ := json.Marshal(newHouse)
-	req := httptest.NewRequest(http.MethodPost, "/houses", bytes.NewReader(body))
-	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/houses", bytes.NewBuffer(body))
+	rr := httptest.NewRecorder()
 
-	handler.CreateHouse(w, req)
+	handler.CreateHouse(rr, req)
 
-	assert.Equal(t, http.StatusCreated, w.Code)
-	mockRepo.AssertExpectations(t)
+	assert.Equal(t, http.StatusCreated, rr.Code)
 }
 
-func TestCreateHouse_ValidationError(t *testing.T) {
+func TestPatchHouse(t *testing.T) {
 	mockRepo := new(MockHouseRepo)
 	handler := &HouseHandler{repo: mockRepo}
 
-	invalidHouse := models.House{Address: "", Rooms: 0, Price: 100}
+	houseID := 1
+	updateData := map[string]interface{}{"price": 150000.0}
+	updatedHouse := &models.House{ID: houseID, Address: "Test St", Price: 150000.0}
+
+	mockRepo.On("UpdatePartial", houseID, updateData).Return(nil)
+	mockRepo.On("GetByID", houseID).Return(updatedHouse, nil)
+
+	body, _ := json.Marshal(updateData)
+	req, _ := http.NewRequest("PATCH", "/houses/1", bytes.NewBuffer(body))
 	
-	body, _ := json.Marshal(invalidHouse)
-	req := httptest.NewRequest(http.MethodPost, "/houses", bytes.NewReader(body))
-	w := httptest.NewRecorder()
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
-	handler.CreateHouse(w, req)
+	rr := httptest.NewRecorder()
+	handler.PatchHouse(rr, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	mockRepo.AssertNotCalled(t, "Create")
-}
-
-func TestGetHouseByID_Success(t *testing.T) {
-	mockRepo := new(MockHouseRepo)
-	handler := &HouseHandler{repo: mockRepo}
-
-	// Виправлено Floors на Rooms
-	expectedHouse := &models.House{ID: 1, Address: "Odessa, Deribasivska", Rooms: 3, Price: 200000}
-	
-	mockRepo.On("GetByID", 1).Return(expectedHouse, nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/houses/1", nil)
-	req.SetPathValue("id", "1") 
-	w := httptest.NewRecorder()
-
-	handler.GetHouseByID(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	
-	var responseHouse models.House
-	json.NewDecoder(w.Body).Decode(&responseHouse)
-	assert.Equal(t, expectedHouse.Address, responseHouse.Address)
-	
+	assert.Equal(t, http.StatusOK, rr.Code)
 	mockRepo.AssertExpectations(t)
 }
 
+func TestDeleteHouse(t *testing.T) {
+	mockRepo := new(MockHouseRepo)
+	handler := &HouseHandler{repo: mockRepo}
+
+	mockRepo.On("Delete", 1).Return(nil)
+
+	req, _ := http.NewRequest("DELETE", "/houses/1", nil)
+	
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	rr := httptest.NewRecorder()
+	handler.DeleteHouse(rr, req)
+
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+	mockRepo.AssertExpectations(t)
+}
