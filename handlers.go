@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv" 
 	"house-api/models" 
+	"github.com/go-chi/chi/v5"
 )
 
 type HouseHandler struct {
@@ -76,28 +77,29 @@ func (h *HouseHandler) GetHouses(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HouseHandler) UpdateHouse(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		http.Error(w, "Некоректний ID", http.StatusBadRequest)
 		return
 	}
 
 	var house models.House
 	if err := json.NewDecoder(r.Body).Decode(&house); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		http.Error(w, "Некоректний JSON", http.StatusBadRequest)
 		return
 	}
+
 	house.ID = id 
 
-	if err := house.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := h.repo.UpdateFull(&house); err != nil {
+		log.Printf("Помилка оновлення: %v", err)
+		http.Error(w, "Помилка сервера", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.repo.UpdateFull(&house); err != nil {
-		http.Error(w, "Update failed", http.StatusInternalServerError)
-		return
-	}
+        w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(house)
 }
 
@@ -122,15 +124,18 @@ func (h *HouseHandler) UpdateHousePartial(w http.ResponseWriter, r *http.Request
 }
 
 func (h *HouseHandler) DeleteHouse(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		http.Error(w, "Некоректний ID", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.repo.Delete(id); err != nil {
-		http.Error(w, "Delete failed", http.StatusInternalServerError)
+		log.Printf("Помилка видалення: %v", err)
+		http.Error(w, "Помилка сервера", http.StatusInternalServerError)
 		return
 	}
+	
 	w.WriteHeader(http.StatusNoContent)
 }

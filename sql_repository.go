@@ -14,6 +14,19 @@ func NewSqlHouseRepository(db *sql.DB) *SqlHouseRepository {
 	return &SqlHouseRepository{db: db}
 }
 
+func (r *SqlHouseRepository) Create(house *models.House) error {
+	query := "INSERT INTO houses (address, price,  rooms, square_meters) VALUES (?, ?, ?, ?)"
+	
+	result, err := r.db.Exec(query, house.Address, house.Price, house.Rooms, house.SquareMeters)
+	if err != nil {
+		return err
+	}
+
+	id, _ := result.LastInsertId()
+	house.ID = int(id)
+	return nil
+}
+
 func (r *SqlHouseRepository) GetByID(id int) (*models.House, error) {
 	var h models.House
 	query := "SELECT id, address, price,  rooms, square_meters  FROM houses WHERE id = ?"
@@ -27,19 +40,6 @@ func (r *SqlHouseRepository) GetByID(id int) (*models.House, error) {
 	}
 	
 	return &h, nil
-}
-
-func (r *SqlHouseRepository) Create(house *models.House) error {
-	query := "INSERT INTO houses (address, price,  rooms, square_meters) VALUES (?, ?, ?, ?)"
-	
-	result, err := r.db.Exec(query, house.Address, house.Price, house.Rooms, house.SquareMeters)
-	if err != nil {
-		return err
-	}
-
-	id, _ := result.LastInsertId()
-	house.ID = int(id)
-	return nil
 }
 
 func (r *SqlHouseRepository) GetAll() ([]models.House, error) {
@@ -63,9 +63,25 @@ func (r *SqlHouseRepository) GetAll() ([]models.House, error) {
 }
 
 func (r *SqlHouseRepository) Delete(id int) error {
-	_, err := r.db.Exec("DELETE FROM houses WHERE id = ?", id)
-	return err
+	query := "DELETE FROM houses WHERE id = ?"
+	_, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("помилка видалення будинку: %w", err)
+	}
+	return nil
 }
 
-func (r *SqlHouseRepository) UpdateFull(house *models.House) error { return nil }
+func (r *SqlHouseRepository) UpdateFull(house *models.House) error { 
+                  query := `UPDATE houses 
+	          SET address = ?,  price = ?,  rooms = ?,  square_meters = ? 
+	          WHERE id = ?`
+	
+	_, err := r.db.Exec(query, house.Address, house.Price, house.Rooms, house.SquareMeters, house.ID)
+	if err != nil {
+		return fmt.Errorf("помилка оновлення будинку: %w", err) }
+	return nil
+
+}
+
+
 func (r *SqlHouseRepository) UpdatePartial(id int, data map[string]interface{}) error { return nil }

@@ -30,7 +30,10 @@ func main() {
     
     r.Post("/houses", handler.CreateHouse)
     r.Get("/houses", handler.GetHouses)
+    
     r.Get("/houses/{id}", handler.GetHouseByID)
+    r.Put("/houses/{id}", handler.UpdateHouse)    
+    r.Delete("/houses/{id}", handler.DeleteHouse) 
 
     http.HandleFunc("/houses", handler.CreateHouse)
     
