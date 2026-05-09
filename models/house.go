@@ -1,5 +1,8 @@
 package models
 
+import ("errors"
+"strings")
+
 type House struct {
 	ID        int     `json:"id"`
 	Address   string  `json:"address"`
@@ -14,4 +17,16 @@ type HouseRepository interface {
 	UpdateFull(house *House) error
 	UpdatePartial(id int, updateData map[string]interface{}) error
 	Delete(id int) error
+}
+func (h *House) Validate() error{
+	if strings.TrimSpace(h.Address) == ""{
+		return errors.New("addres cannot be empty")
+	}
+	if h.Price <= 0 {
+		return errors.New("price must be a positive number")
+	}
+	if h.Rooms <= 0 {
+		return errors.New("rooms must be a positive number")
+	}	
+	return nil
 }
