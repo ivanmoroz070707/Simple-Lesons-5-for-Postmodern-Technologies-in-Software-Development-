@@ -7,10 +7,10 @@ type House struct {
 	Address      string  `json:"address"`
 	Rooms        int     `json:"rooms"`
 	Price        float64 `json:"price"`
-	SquareMeters float64 `json:"square_meters"` // Додаємо це поле
+	SquareMeters float64 `json:"square_meters"` 
 }
 
-// Додаємо метод Validate, щоб хендлер не сварився
+
 func (h *House) Validate() error {
 	if h.Address == "" {
 		return errors.New("адреса не може бути порожньою")
