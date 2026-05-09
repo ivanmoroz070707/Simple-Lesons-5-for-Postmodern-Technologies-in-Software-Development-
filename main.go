@@ -83,7 +83,7 @@ func main() {
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit // Код зупиняється тут і чекає...
+	<-quit 
 
 	log.Println("Отримано сигнал зупинки. Вимикаємо сервер...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
