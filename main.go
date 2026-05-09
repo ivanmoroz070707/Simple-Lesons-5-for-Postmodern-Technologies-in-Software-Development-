@@ -70,6 +70,7 @@ func main() {
     r.Get("/houses/{id}", handler.GetHouseByID)
     r.Put("/houses/{id}", handler.UpdateHouse)    
     r.Delete("/houses/{id}", handler.DeleteHouse) 
+    r.Patch("/houses/{id}", handler.PatchHouse)
 
     http.HandleFunc("/houses", handler.CreateHouse)
     

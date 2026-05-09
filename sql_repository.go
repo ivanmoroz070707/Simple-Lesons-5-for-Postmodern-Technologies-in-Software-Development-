@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"house-api/models" 
 	"fmt"
+	"strings"
 )
 
 type SqlHouseRepository struct {
@@ -83,5 +84,36 @@ func (r *SqlHouseRepository) UpdateFull(house *models.House) error {
 
 }
 
+func (r *SqlHouseRepository) UpdatePartial(id int, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return nil 
+	}
 
-func (r *SqlHouseRepository) UpdatePartial(id int, data map[string]interface{}) error { return nil }
+	query := "UPDATE houses SET "
+	var setParts []string
+	var args []interface{}
+
+	allowedFields := map[string]bool{
+		"address": true, "price": true, "rooms": true, "square_meters": true,
+	}
+
+	for key, value := range updates {
+		if allowedFields[key] {
+			setParts = append(setParts, key+" = ?")
+			args = append(args, value)
+		}
+	}
+
+	if len(setParts) == 0 {
+		return fmt.Errorf("не передано жодного валідного поля для оновлення")
+	}
+
+	query += strings.Join(setParts, ", ") + " WHERE id = ?"
+	args = append(args, id)
+
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("помилка часткового оновлення: %w", err)
+	}
+	return nil
+}

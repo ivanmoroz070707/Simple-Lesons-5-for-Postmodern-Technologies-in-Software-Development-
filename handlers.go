@@ -139,3 +139,38 @@ func (h *HouseHandler) DeleteHouse(w http.ResponseWriter, r *http.Request) {
 	
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *HouseHandler) PatchHouse(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Некоректний ID", http.StatusBadRequest)
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, "Некоректний JSON", http.StatusBadRequest)
+		return
+	}
+
+	if price, ok := updates["price"].(float64); ok && price <= 0 {
+		http.Error(w, "Ціна має бути більшою за нуль", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.UpdatePartial(id, updates); err != nil {
+		log.Printf("Помилка PATCH: %v", err)
+		http.Error(w, "Помилка сервера", http.StatusInternalServerError)
+		return
+	}
+
+	house, err := h.repo.GetByID(id)
+	if err != nil {
+		http.Error(w, "Будинок оновлено, але не знайдено", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(house)
+}
