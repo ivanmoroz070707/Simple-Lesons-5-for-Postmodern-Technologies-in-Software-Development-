@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS houses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     address VARCHAR(255) NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    floors INT NOT NULL,
+    rooms INT NOT NULL,
     square_meters DECIMAL(10, 2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

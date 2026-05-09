@@ -1,0 +1,46 @@
+{
+	"info": {
+		"name": "House API - Student 2",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Створити будинок (POST)",
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"address\": \"вул. Політехнічна, 1\",\n  \"price\": 120000.50,\n  \"rooms\": 3,\n  \"square_meters\": 85.5\n}"
+				},
+				"url": "http://localhost:8080/houses"
+			}
+		},
+		{
+			"name": "Отримати всі будинки (GET)",
+			"request": {
+				"method": "GET",
+				"url": "http://localhost:8080/houses"
+			}
+		},
+		{
+			"name": "Часткове оновлення ціни (PATCH)",
+			"request": {
+				"method": "PATCH",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"price\": 135000.0\n}"
+				},
+				"url": "http://localhost:8080/houses/1"
+			}
+		},
+		{
+			"name": "Видалити будинок (DELETE)",
+			"request": {
+				"method": "DELETE",
+				"url": "http://localhost:8080/houses/1"
+			}
+		}
+	]
+}
